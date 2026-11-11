@@ -151,10 +151,10 @@
 - `cloud-deploy/SKILL.md` fixed: removed the non-existent `tfctl attach varset`, added the varset create and attach steps with dry-run first, added a verify step, and replaced the fixed `>= 1.1.0` example with "a version satisfying the repo's required_version".
 
 **Still open (operator).**
-1. Create or identify a dedicated demo IAM user and long-lived access keys. It is not known whether such a user exists or whether `ajs-nonroot` may create one. The credentials from `aws login` are short-lived and must not be used.
+1. Create a dedicated demo IAM user and long-lived access keys. Checked read-only: the account has only two IAM users (`ajs-nonroot`, `tfe-s1-aws-upgrade`), so no demo user exists yet; policy simulation says `ajs-nonroot` is allowed `iam:CreateUser`, `iam:CreateAccessKey`, `iam:PutUserPolicy`, `iam:AttachUserPolicy` and `iam:CreatePolicy`. The credentials from `aws login` are short-lived and must not be used.
 2. In the HCP Terraform UI, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the Variable Set as category env, both marked sensitive. Do not paste the values in chat or files. `AWS_REGION` is optional (not sensitive).
 3. Bob then verifies names, category and the sensitive flag only; Bob never reads values.
-4. The IAM user needs permissions for the state bucket (`s3:ListBucket` on the bucket, read/write/delete on the state key and its `.tflock` object) and for managing the five demo resources. No policy has been drafted yet; the user may ask for one to review.
+4. Draft policy: `iam/demo-cloudblk-provupgrade-policy.json`, scoped to the demo bucket, the SSM parameter path and the SNS topic. It deliberately has NO access to the state bucket: after the cutover the state lives in HCP Terraform, and the migrating `init` runs locally with the operator's own credentials. (An earlier note in this plan said the user needed state bucket access; that was wrong.) Checked only by `iam simulate-custom-policy`: all 11 expected actions allowed, 6 out-of-scope actions implicitly denied. Simulation does not prove the AWS provider's real call set is covered; the first remote plan is the real test, and an AccessDenied there means the policy needs another action. Account ID and resource names are hardcoded in the file.
 5. The operator's Terraform CLI needs its own token for the `cloud` block `init`.
 
 **Intent.** Create `demo-cloudblk-provupgrade` and a Variable Set for AWS credentials without exposing secrets.

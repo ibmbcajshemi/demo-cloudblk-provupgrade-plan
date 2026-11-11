@@ -1,0 +1,48 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DemoBucket",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::demo-cloudblk-provupgrade-ajs11102026",
+        "arn:aws:s3:::demo-cloudblk-provupgrade-ajs11102026/*"
+      ]
+    },
+    {
+      "Sid": "DemoParameter",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:PutParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:DeleteParameter",
+        "ssm:AddTagsToResource",
+        "ssm:RemoveTagsFromResource",
+        "ssm:ListTagsForResource"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:725925681035:parameter/demo-cloudblk-provupgrade/*"
+    },
+    {
+      "Sid": "DescribeParametersHasNoResourceScope",
+      "Effect": "Allow",
+      "Action": "ssm:DescribeParameters",
+      "Resource": "*"
+    },
+    {
+      "Sid": "DemoTopic",
+      "Effect": "Allow",
+      "Action": [
+        "sns:CreateTopic",
+        "sns:DeleteTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:ListTagsForResource",
+        "sns:TagResource",
+        "sns:UntagResource"
+      ],
+      "Resource": "arn:aws:sns:us-east-1:725925681035:demo-cloudblk-provupgrade-topic"
+    }
+  ]
+}
