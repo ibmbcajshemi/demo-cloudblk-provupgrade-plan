@@ -141,7 +141,7 @@
 
 ### Sub-task 4: Provision the TFE workspace and Variable Set (human approved)
 
-**Status:** [-] in progress (workspace, Variable Set and attachment done; waiting on the operator to enter AWS credentials in the TFE UI)
+**Status:** [x] done (the AWS key is untested until the first remote plan; see below)
 
 **Result so far (created after the user's explicit approval, `terraform-version` 1.14.3).**
 - Workspace `demo-cloudblk-provupgrade`, id `ws-EBiJXXTP3UDJrDFG`, org `tce-to-tfe-migration`: `execution-mode` remote, `auto-apply` false, `terraform-version` 1.14.3, unlocked, 0 resources.
@@ -155,7 +155,6 @@
 2. In the HCP Terraform UI, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the Variable Set as category env, both marked sensitive. Do not paste the values in chat or files. `AWS_REGION` is optional (not sensitive).
 3. Bob then verifies names, category and the sensitive flag only; Bob never reads values.
 4. Draft policy: `iam/demo-cloudblk-provupgrade-policy.json`, scoped to the demo bucket, the SSM parameter path and the SNS topic. It deliberately has NO access to the state bucket: after the cutover the state lives in HCP Terraform, and the migrating `init` runs locally with the operator's own credentials. (An earlier note in this plan said the user needed state bucket access; that was wrong.) Checked only by `iam simulate-custom-policy`: all 11 expected actions allowed, 6 out-of-scope actions implicitly denied. Simulation does not prove the AWS provider's real call set is covered; the first remote plan is the real test, and an AccessDenied there means the policy needs another action. Account ID and resource names are hardcoded in the file.
-5. The operator's Terraform CLI needs its own token for the `cloud` block `init`.
 
 **Intent.** Create `demo-cloudblk-provupgrade` and a Variable Set for AWS credentials without exposing secrets.
 
@@ -284,6 +283,7 @@
 - Audit manifest from `.bob/scripts/tf-audit-report.sh` using `<repo>/.state-backups/cutover-evidence.txt`.
 - A short demo write-up: what moved, what changed in state, what each PR contained.
 - Operator completes teardown: `terraform destroy` through the workspace, then removal of the legacy state bucket and the TFE workspace and Variable Set. Bob prepares the steps; it runs none of the deletions.
+- IAM cleanup (operator): delete the demo user's access key (`aws iam delete-access-key`), its inline policy (`aws iam delete-user-policy --policy-name demo-cloudblk-provupgrade`), then the user (`aws iam delete-user --user-name demo-cloudblk-provupgrade-tfe`). Also delete the Variable Set `demo-cloudblk-provupgrade-aws` and the state reference copy in `~/demo-state-backups/`. The state bucket `statebucket-ajs11102026` is versioned, so emptying it means deleting all object versions and delete markers before the bucket itself can be removed.
 
 **Todo List.**
 1. Run the audit report script and attach the output to the PR record.
