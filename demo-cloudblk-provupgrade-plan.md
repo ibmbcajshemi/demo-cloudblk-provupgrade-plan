@@ -180,7 +180,7 @@
 
 ### Sub-task 5: Generate the migration plan and runbook (`tf-migration-plan`)
 
-**Status:** [ ] pending
+**Status:** [x] done. Runbook: `reports/migration-plan-demo-cloudblk-provupgrade-20261110-233055.md` (not yet reviewed by the operator).
 
 **Intent.** Produce the human-in-the-loop runbook for PR 1 cutover and PR 2 upgrade.
 
