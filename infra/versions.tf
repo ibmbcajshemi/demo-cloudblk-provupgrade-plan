@@ -1,12 +1,13 @@
 terraform {
   required_version = ">= 1.11.0, < 2.0.0"
 
-  backend "s3" {
-    bucket       = "statebucket-ajs11102026"
-    key          = "demo-cloudblk-provupgrade/terraform.tfstate"
-    region       = "us-east-1"
-    encrypt      = true
-    use_lockfile = true
+  cloud {
+    hostname     = "app.terraform.io"
+    organization = "tce-to-tfe-migration"
+
+    workspaces {
+      name = "demo-cloudblk-provupgrade"
+    }
   }
 
   required_providers {
