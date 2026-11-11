@@ -202,7 +202,22 @@
 
 ### Sub-task 6: PR 1, backend swap only (`tf-code-migrate`)
 
-**Status:** [ ] pending
+**Status:** [x] done. PR 1 merged (`3083c86`) and the operator cutover passed the zero-diff gate.
+
+**Results (operator ran Phases A to C; Bob verified from disk and the HCP Terraform API, read-only).**
+- PR: https://github.com/ibmbcajshemi/demo-cloudblk-provupgrade-plan/pull/1. Code change: `infra/versions.tf` only (`backend "s3"` replaced by the `cloud` block). Provider constraint and lock file unchanged.
+- Phase A backup (S3 backend still active): `.state-backups/state-backup-20261111001030.tfstate`, SHA-256 `47dce3e5fa05f6504b049cbee940f0d25d92f7ae4d1284c7fdf4ee327c79b18c`, which matches the baseline reference copy. Serial 1, lineage `f1668ffb-0149-65a3-c78e-beb311fdca08`, Terraform 1.14.3, 5 resources.
+- Phase B: `init` copied the state to the workspace. New state version `sv-33pUgTs6zGyBMFZm`, serial 1, 5 resources.
+- Phase C: remote plan `run-o1rVt559GkB9CCKg`, status `planned_and_finished`, `has-changes` false, all five resources `no-op`. `cutover-evidence.txt` records `plan_exit_code=0`. This also exercised the Variable Set key and the IAM policy: the refresh ran with no AccessDenied.
+- Rollback was not needed. The S3 state object is untouched (8,482 bytes, last modified 2026-11-11T03:36:02Z).
+
+**State measurements (before = Phase A backup, after = workspace current state).**
+- `serial`: 1 and 1, unchanged.
+- `lineage`: changed from `f1668ffb-0149-65a3-c78e-beb311fdca08` to `b4560103-7d79-ca38-7415-45dd1826eafd`. Resources and outputs are identical to the backup. The cause is not verified; the likely explanation is that the migrating `init` creates a new lineage in the new workspace.
+- Drift lines in the plan log: the refresh reported `Drift detected (update)` on `aws_s3_bucket.demo` (`versioning` disabled to enabled, `tags` null to `{}`), `aws_sns_topic.demo` and `aws_ssm_parameter.demo` (`tags` null to `{}`). The plan result was still no-op. This is an observation of the plan JSON; the explanation (provider read filling in attributes) is unverified, and the stored state was not compared before and after.
+
+**Not verified.** Why the lineage changed. Whether the stored state differs from the backup in attributes beyond resources and outputs identity (only resource instances and outputs were compared).
+
 
 **Intent.** Convert the S3 backend to a `cloud` block pointing at the confirmed target, with no provider changes.
 
