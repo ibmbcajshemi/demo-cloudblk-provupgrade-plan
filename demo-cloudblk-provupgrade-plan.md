@@ -272,7 +272,22 @@
 
 ### Sub-task 7: PR 2, AWS provider upgrade
 
-**Status:** [ ] pending
+**Status:** [x] code and plan evidence done. PR 2 is merged (`13d10ac` on `main`). The state-change measurement (operator refresh-only apply) is pending.
+
+**Results.**
+- Target: `hashicorp/aws` `~> 5.100.0`. 5.100.0 is the last 5.x in the registry; 6.x (latest 6.72.0 at the time) is deferred because the v6 upgrade guide requires a clean plan on the latest 5.x first.
+- PR: https://github.com/ibmbcajshemi/demo-cloudblk-provupgrade-plan/pull/2. Changed files: `infra/versions.tf`, `infra/.terraform.lock.hcl`, and the PR description. The lock file records 5.100.0 with `h1` hashes for `darwin_arm64` and `linux_amd64` (re-added with `terraform providers lock`, because `init -upgrade` kept only the local platform).
+- Upgrade-guide review: the v5 guide lists no change that affects this configuration (the provider arguments removed in 5.0.0 are not set; the `default_tags` changes are non-breaking; the `aws_ssm_parameter.overwrite` deprecation is not used). The v6 guide was also read: `aws_s3_bucket` gains `bucket_region` and most resources gain a `region` attribute; nothing is listed for the other resources. Release notes for 4.x and 5.x were not available in the upstream changelog file, so only the guides were reviewed.
+- Gates: `fmt` and `validate` pass; `tflint` is not installed, so it was not run.
+- Branch plan `run-HJ2hesx3MjCTZLah`: speculative, all five resources no-op.
+- Merged-code plan `run-jNzWHHaifKiAxnfE` from `main` at `13d10ac`: speculative, all five resources no-op; the operator's `terraform plan -detailed-exitcode` printed `exit=0`.
+- No `AccessDenied` on the refresh with 5.100.0, so the IAM policy covers it.
+- Refresh differences logged as `Drift detected (update)` (the plan result is still no-op): `aws_s3_bucket.demo` (`bucket_regional_domain_name`, `versioning`, `tags`), `aws_sns_topic.demo` (`archive_policy`, `beginning_archive_time`, `fifo_throughput_scope`, `tags`), `aws_ssm_parameter.demo` (`tags`). Causes not verified.
+- State: the workspace is still on state version `sv-33pUgTs6zGyBMFZm`, serial 1, 5 resources, after both PR 2 plans. A speculative plan writes nothing, and no apply has been run since the baseline.
+
+**Pending (operator).** Refresh-only apply with `state pull` backups before and after, to measure whether state changes under 5.100.0.
+
+**Not verified.** Whether an apply under 5.100.0 changes the stored state (attributes, `schema_version`). The cause of each refresh difference. `tflint` results.
 
 **Intent.** Upgrade the AWS provider on the migrated workspace and show exactly what, if anything, changes in plan and state.
 
