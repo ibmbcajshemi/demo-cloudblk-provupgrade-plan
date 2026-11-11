@@ -272,7 +272,7 @@
 
 ### Sub-task 7: PR 2, AWS provider upgrade
 
-**Status:** [x] code and plan evidence done. PR 2 is merged (`13d10ac` on `main`). The state-change measurement (operator refresh-only apply) is pending.
+**Status:** [x] done. PR 2 is merged (`13d10ac` on `main`) and the state-change measurement (operator refresh-only apply) is complete.
 
 **Results.**
 - Target: `hashicorp/aws` `~> 5.100.0`. 5.100.0 is the last 5.x in the registry; 6.x (latest 6.72.0 at the time) is deferred because the v6 upgrade guide requires a clean plan on the latest 5.x first.
@@ -285,9 +285,15 @@
 - Refresh differences logged as `Drift detected (update)` (the plan result is still no-op): `aws_s3_bucket.demo` (`bucket_regional_domain_name`, `versioning`, `tags`), `aws_sns_topic.demo` (`archive_policy`, `beginning_archive_time`, `fifo_throughput_scope`, `tags`), `aws_ssm_parameter.demo` (`tags`). Causes not verified.
 - State: the workspace is still on state version `sv-33pUgTs6zGyBMFZm`, serial 1, 5 resources, after both PR 2 plans. A speculative plan writes nothing, and no apply has been run since the baseline.
 
-**Pending (operator).** Refresh-only apply with `state pull` backups before and after, to measure whether state changes under 5.100.0.
+**State measurement (operator ran a refresh-only apply; Bob compared the states read-only).**
+- Run `run-Ew47vpaAdVuHevs9` (`plan -refresh-only`, speculative) showed `resource_changes` empty and three drifted resources. The operator then ran `terraform apply -refresh-only` and answered `yes`: run `run-t5DLU63Qsy1gnavU`, "Apply complete! Resources: 0 added, 0 changed, 0 destroyed."
+- Backups (git-ignored, mode 600): before `state-pre-refresh-20261111011527.tfstate`, SHA-256 `8dbc976215ec56a5e89e0855f96f2b6e39a7189539fa4d74d645549eb1ff54f7`; after `state-post-refresh-20261111012718.tfstate`, SHA-256 `c8576de2d6a6eddab007760c469d6b824dff988fa2f7578a1964efbcafa548c7`. The after file is identical to the workspace state version `sv-XBrEV5DTezsqhR5Q`.
+- Measured differences, before to after: `serial` 1 to 2; `lineage` unchanged (`b4560103-7d79-ca38-7415-45dd1826eafd`); Terraform version 1.14.3 and state format 4 unchanged; resource set, providers and outputs identical; `schema_version` 0 on all five resources, before and after.
+- Attribute changes (state only; nothing in AWS changed): `aws_s3_bucket.demo` (`bucket_regional_domain_name` global to regional form, `versioning.enabled` false to true, `tags` null to `{}`); `aws_sns_topic.demo` (`archive_policy`, `beginning_archive_time`, `fifo_throughput_scope` added as empty strings, `tags` null to `{}`); `aws_ssm_parameter.demo` (`tags` null to `{}`, new null attributes `has_value_wo`, `value_wo`, `value_wo_version`, and `value_wo` added to `sensitive_attributes`); `aws_s3_bucket_public_access_block.demo` and `aws_s3_bucket_versioning.demo` unchanged.
+- Zero-diff after the refresh: `run-gdm82Z6B5UJJrgq8` plan-only, all five resources no-op, `resource_drift` 0; the operator's `terraform plan -detailed-exitcode` printed `exit=0`.
+- Conclusion: for this configuration the provider upgrade changed stored state only by adding attributes and normalising values, and the plan was zero-diff before and after. This is a measurement for these five resources only.
 
-**Not verified.** Whether an apply under 5.100.0 changes the stored state (attributes, `schema_version`). The cause of each refresh difference. `tflint` results.
+**Not verified.** Why each attribute changed (the `versioning.enabled` change is consistent with the separate `aws_s3_bucket_versioning` resource, which is a reading, not a test). `tflint` results.
 
 **Intent.** Upgrade the AWS provider on the migrated workspace and show exactly what, if anything, changes in plan and state.
 
