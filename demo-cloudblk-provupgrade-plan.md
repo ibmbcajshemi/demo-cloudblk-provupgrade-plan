@@ -141,7 +141,21 @@
 
 ### Sub-task 4: Provision the TFE workspace and Variable Set (human approved)
 
-**Status:** [ ] pending
+**Status:** [-] in progress (workspace, Variable Set and attachment done; waiting on the operator to enter AWS credentials in the TFE UI)
+
+**Result so far (created after the user's explicit approval, `terraform-version` 1.14.3).**
+- Workspace `demo-cloudblk-provupgrade`, id `ws-EBiJXXTP3UDJrDFG`, org `tce-to-tfe-migration`: `execution-mode` remote, `auto-apply` false, `terraform-version` 1.14.3, unlocked, 0 resources.
+- Variable Set `demo-cloudblk-provupgrade-aws`, id `varset-GmkbFgMHSLvmjiRE`, not global, created empty (0 variables).
+- Attachment done with API operation `applyVarsetToWorkspaces` (`tfctl attach` does not exist in v0.4.0). Verified read-only: the workspace lists exactly this Variable Set, and the set shows `workspace-count` 1.
+- Not touched: the other four workspaces and the existing `aws-credentials` Variable Set (2 variables, 1 workspace).
+- `cloud-deploy/SKILL.md` fixed: removed the non-existent `tfctl attach varset`, added the varset create and attach steps with dry-run first, added a verify step, and replaced the fixed `>= 1.1.0` example with "a version satisfying the repo's required_version".
+
+**Still open (operator).**
+1. Create or identify a dedicated demo IAM user and long-lived access keys. It is not known whether such a user exists or whether `ajs-nonroot` may create one. The credentials from `aws login` are short-lived and must not be used.
+2. In the HCP Terraform UI, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the Variable Set as category env, both marked sensitive. Do not paste the values in chat or files. `AWS_REGION` is optional (not sensitive).
+3. Bob then verifies names, category and the sensitive flag only; Bob never reads values.
+4. The IAM user needs permissions for the state bucket (`s3:ListBucket` on the bucket, read/write/delete on the state key and its `.tflock` object) and for managing the five demo resources. No policy has been drafted yet; the user may ask for one to review.
+5. The operator's Terraform CLI needs its own token for the `cloud` block `init`.
 
 **Intent.** Create `demo-cloudblk-provupgrade` and a Variable Set for AWS credentials without exposing secrets.
 

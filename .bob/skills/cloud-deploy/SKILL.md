@@ -36,9 +36,11 @@ Use `tfctl` to scaffold the destination workspace and enforce organization namin
      -a description="Migrated from CE - <repo-name>" \
      -a execution-mode=<local|remote|agent> \
      -a auto-apply=false \
-     -a terraform-version=">= 1.1.0" \
+     -a terraform-version="<version satisfying the repo's required_version>" \
      -o <org-name>
    ```
+   The workspace Terraform version must satisfy the repository's `required_version` (read it from the code; for example a repo that needs S3 native locking requires 1.11 or newer). A fixed example such as `>= 1.1.0` can be too low. Use `--json` on `create` to get the new workspace ID from the response.
+
    *To update an existing workspace's execution mode:*
    ```bash
    tfctl api /workspaces/<workspace-id> -X PATCH -i '{"data":{"attributes":{"execution-mode":"<local|remote|agent>"},"type":"workspaces"}}'
@@ -57,10 +59,21 @@ Use `tfctl` to scaffold the destination workspace and enforce organization namin
    ```bash
    tfctl get varsets -o <org-name> --all --json
    ```
-2. **Create / Attach Variable Set**:
+   Do not assume an existing set fits the target. If one is not clearly meant for it, ask the user whether to reuse it or create a new one.
+2. **Create a Variable Set shell (no values)**. `-a` only sets attributes, and variable sets need a JSON body (`tfctl create --help`):
    ```bash
-   # Attach global or project variable set to target workspace
-   tfctl attach varset -i <varset-id> -w <workspace-id> -o <org-name>
+   tfctl create varset -o <org-name> --dry-run -i '{"data":{"type":"varsets","attributes":{"name":"<varset-name>","description":"<description>","global":false}}}'
+   ```
+   Review the dry-run, get the user's approval, then run it without `--dry-run` and add `--json` to read the new ID. The operator enters credential values in the TFE UI as sensitive environment variables. Never put values in the command.
+3. **Attach the Variable Set to the workspace.** `tfctl attach` does not exist (tfctl v0.4.0). Use the API operation `applyVarsetToWorkspaces` (find it with `tfctl api schema get applyVarsetToWorkspaces`):
+   ```bash
+   tfctl api /varsets/<varset-id>/relationships/workspaces -X POST --dry-run -i '{"data":[{"type":"workspaces","id":"<workspace-id>"}]}'
+   # after approval, run again without --dry-run (success returns an empty body)
+   ```
+4. **Verify (read-only)**:
+   ```bash
+   tfctl api /workspaces/<workspace-id>/varsets --json
+   tfctl api /varsets/<varset-id>/relationships/vars --json   # keys, category and sensitive flag only
    ```
 
 ---
