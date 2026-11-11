@@ -1,0 +1,10 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+.state-backups/
+terraform.tfvars
+*.auto.tfvars
+.DS_Store
