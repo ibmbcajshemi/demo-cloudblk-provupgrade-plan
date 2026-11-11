@@ -150,11 +150,14 @@
 - Not touched: the other four workspaces and the existing `aws-credentials` Variable Set (2 variables, 1 workspace).
 - `cloud-deploy/SKILL.md` fixed: removed the non-existent `tfctl attach varset`, added the varset create and attach steps with dry-run first, added a verify step, and replaced the fixed `>= 1.1.0` example with "a version satisfying the repo's required_version".
 
-**Still open (operator).**
-1. Create a dedicated demo IAM user and long-lived access keys. Checked read-only: the account has only two IAM users (`ajs-nonroot`, `tfe-s1-aws-upgrade`), so no demo user exists yet; policy simulation says `ajs-nonroot` is allowed `iam:CreateUser`, `iam:CreateAccessKey`, `iam:PutUserPolicy`, `iam:AttachUserPolicy` and `iam:CreatePolicy`. The credentials from `aws login` are short-lived and must not be used.
-2. In the HCP Terraform UI, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the Variable Set as category env, both marked sensitive. Do not paste the values in chat or files. `AWS_REGION` is optional (not sensitive).
-3. Bob then verifies names, category and the sensitive flag only; Bob never reads values.
-4. Draft policy: `iam/demo-cloudblk-provupgrade-policy.json`, scoped to the demo bucket, the SSM parameter path and the SNS topic. It deliberately has NO access to the state bucket: after the cutover the state lives in HCP Terraform, and the migrating `init` runs locally with the operator's own credentials. (An earlier note in this plan said the user needed state bucket access; that was wrong.) Checked only by `iam simulate-custom-policy`: all 11 expected actions allowed, 6 out-of-scope actions implicitly denied. Simulation does not prove the AWS provider's real call set is covered; the first remote plan is the real test, and an AccessDenied there means the policy needs another action. Account ID and resource names are hardcoded in the file.
+**Operator steps completed.**
+1. The operator created IAM user `demo-cloudblk-provupgrade-tfe` with inline policy `demo-cloudblk-provupgrade` (from `iam/demo-cloudblk-provupgrade-policy.json`) and one long-lived access key. The two accidental extra keys were deleted.
+2. The operator added `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to the Variable Set in the UI (category env, both sensitive). Bob verified names, category and the sensitive flag read-only; Bob never reads values.
+
+**Not verified.**
+- The access key itself is untested: Bob cannot read it. The first remote plan is the real test.
+- Policy coverage is untested. The policy is scoped to the demo bucket, the SSM parameter path and the SNS topic, with NO access to the state bucket (after the cutover the state lives in HCP Terraform, and the migrating `init` runs locally with the operator's own credentials; an earlier note saying otherwise was wrong). `iam simulate-custom-policy` allowed all 11 expected actions and implicitly denied 6 out-of-scope actions, but simulation does not prove the AWS provider's real call set is covered. An AccessDenied on the first remote plan means the policy needs another action. Account ID and resource names are hardcoded in the file.
+- The Terraform CLI token for `app.terraform.io` (`terraform login` or `TF_TOKEN_app_terraform_io`) is not verified. `TFE_TOKEN` works with `tfctl` only.
 
 **Intent.** Create `demo-cloudblk-provupgrade` and a Variable Set for AWS credentials without exposing secrets.
 
