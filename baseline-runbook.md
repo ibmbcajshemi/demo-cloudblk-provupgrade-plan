@@ -10,7 +10,28 @@ Target facts: region `us-east-1`, state bucket `statebucket-ajs11102026`, state 
 aws sts get-caller-identity --query '{Account:Account,Arn:Arn}' --output text
 ```
 
-Confirm the account is the one you intend to use for the demo.
+Confirm the account and the IAM user are the ones you intend to use for the demo. Run this in the same terminal where you run Terraform, and again before every `apply`.
+
+### Credentials troubleshooting
+
+Terraform's S3 backend and the AWS provider do not always read the same sources as the AWS CLI. Three problems came up while preparing this demo:
+
+| Symptom | Cause | Fix |
+| :--- | :--- | :--- |
+| `No valid credential sources found ... no EC2 IMDS role found` | The CLI is signed in through `aws login` (a login session), which Terraform did not pick up | Export the session to the shell (below) |
+| `HeadObject ... StatusCode: 403` on the state key | Credentials work, but the identity has no `s3:ListBucket` on the state bucket. S3 returns 403 instead of 404 for a missing object in that case | Check the ARN with the command above. Use an identity with access to the state bucket |
+| `aws login`: `Profile 'default' is already configured with Access Key credentials` | Static keys in `~/.aws/credentials` for `default` override a login session on the same profile | Do not edit `default`. Log in under a separate profile name |
+
+Working sequence (run in your own terminal; `aws login` is interactive):
+
+```bash
+aws login --profile <demo-profile>
+aws sts get-caller-identity --profile <demo-profile> --query Arn --output text   # confirm the expected IAM user
+eval "$(aws configure export-credentials --profile <demo-profile> --format env)"
+aws sts get-caller-identity --query Arn --output text                            # same ARN, now from the exported variables
+```
+
+The exported variables exist only in that terminal session and override the profile files. Never paste them into chat, files or this runbook. If a later command fails with expired credentials, repeat the `aws login` and `eval` lines.
 
 ## 1. Create the state bucket (once, outside Terraform)
 

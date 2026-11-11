@@ -75,13 +75,18 @@
 
 ### Sub-task 2: Build the CE baseline (S3 backend, older AWS provider)
 
-**Status:** [-] in progress (blocked on `.gitignore`, git init/commit/tag, and cost verification)
+**Status:** [x] done, except the AWS cost check, which remains unverified (see below)
 
 **Progress so far.**
 - Done: `infra/` root module written (`versions.tf`, `providers.tf`, `variables.tf`, `main.tf`, `outputs.tf`); S3 backend with `use_lockfile = true`; `hashicorp/aws` `~> 4.67.0` (4.67.0 is the latest 4.x per the public registry); `.terraform.lock.hcl` generated for `darwin_arm64` and `linux_amd64`; `terraform fmt -check` and `validate` pass (init used `-backend=false`).
 - Done: `baseline-runbook.md` (operator-run bucket creation, init, plan, apply, state list, tag).
 - Verified: state bucket name `statebucket-ajs11102026` returned 404 on `head-bucket` (name appears free); Terraform v1.14.3 installed; native S3 locking (`use_lockfile`) is documented as GA in the Terraform v1.11 changelog.
-- Not done: `.gitignore` (write was denied by the tool's ignore-pattern guard), `git init` in this folder with origin `https://github.com/ibmbcajshemi/demo-cloudblk-provupgrade-plan.git`, baseline commit and tag, and the AWS cost check (the pricing pages could not be parsed, so costs are marked not verified in the runbook).
+- Done: separate git repo in this folder, branch `main`, `origin` = `https://github.com/ibmbcajshemi/demo-cloudblk-provupgrade-plan.git`. Local commits `fe8171a` (Bob bundle, skills, plan) and `cdff073` (infra baseline, `baseline-runbook.md`, `.gitignore`, `infra/.terraform.lock.hcl`). Annotated tag `baseline-s3-aws4` on `cdff073`. Nothing is pushed. `.gitignore` was created by the user because the tool's ignore-pattern guard blocked the write.
+- Done: operator ran the baseline (5 added, 0 changed, 0 destroyed). Bob independently verified read-only as `ajs-nonroot` (account `725925681035`, via profile `ajs-demo`): `terraform state list` shows 5 resources; `terraform plan -detailed-exitcode` gives `No changes`, exit 0; state serial is 1, Terraform version 1.14.3; the state object exists in `s3://statebucket-ajs11102026/demo-cloudblk-provupgrade/` (8482 bytes) and the state bucket has versioning enabled; the demo bucket, SSM parameter (Standard, String) and SNS topic exist.
+- Credentials issues found along the way are documented in `baseline-runbook.md` (login session not visible to Terraform; wrong IAM user gave a 403; `aws login` refused on a profile with static keys).
+- Not done: AWS cost check. Pricing pages could not be parsed, so costs stay marked unverified in `baseline-runbook.md`. The user should confirm against the S3, Systems Manager Parameter Store and SNS pricing pages.
+- Not confirmed: the user was asked to save a baseline `terraform state pull` copy outside the repo and send only the SHA-256. No checksum has been received, so there is no recorded baseline state hash yet. `tf-cutover-verify.sh --phase backup` records one at cutover time regardless.
+- Context for sub-task 3: inventory the repo at tag `baseline-s3-aws4`. Backend: `s3`, bucket `statebucket-ajs11102026`, key `demo-cloudblk-provupgrade/terraform.tfstate`, `use_lockfile = true`. `required_version` `>= 1.11.0, < 2.0.0`. Provider `hashicorp/aws` `~> 4.67.0` (lock file `4.67.0`; 4.67.0 is the latest 4.x per the public registry, and the latest stable overall was reported as 6.72.0 at that time; re-verify through the MCP server or registry before recommending a target). No modules. Variables have defaults and no sensitive values. `.vscode/` is untracked and intentionally excluded.
 - Note: the parent repo's `.gitignore` ignores `.terraform.lock.hcl` and `*.tfvars`. A nested repo in this folder will not inherit those rules, and the lock file must be committed for the provider-upgrade PR.
 
 **Intent.** Create a realistic CE starting point that has real state in S3, so the migration moves actual state.
