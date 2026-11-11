@@ -113,7 +113,12 @@
 
 ### Sub-task 3: Run `tf-inventory`
 
-**Status:** [ ] pending
+**Status:** [x] done (with the gaps listed below)
+
+**Result.** Report: `reports/inventory-demo-cloudblk-provupgrade-20261110-224722.md`. Readiness `ACTION_REQUIRED`: no code blocker; the workspace and its credentials do not exist yet.
+- Verified: no name collision in org `tce-to-tfe-migration` (4 existing workspaces, none similar); no modules; 3 variables, none sensitive; no secrets found in `infra/*.tf`; no tracked `.tfvars`; code identical to tag `baseline-s3-aws4`; registry shows 4.67.0 is the last 4.x, latest stable 5.x is 5.100.0, latest stable overall is 6.72.0; OSV returned 0 advisories for 4.67.0 (single lookup).
+- Not verified: Terraform MCP server (configured, Docker image not pulled, not shown connected); AWS pricing; breaking changes between provider majors; contents of the existing `aws-credentials` Variable Set.
+- Context for sub-task 4: an org Variable Set named `aws-credentials` already exists (not global). Do not assume it fits; ask the user whether to reuse it or create a new one. Session credentials from `aws login` expire, so the Variable Set needs long-lived keys for a dedicated IAM user or dynamic credentials. The workspace Terraform version must satisfy `>= 1.11.0` (the `cloud-deploy` skill example `>= 1.1.0` is too low). Do not use `tfe-s1-aws-upgrade` by default. The Terraform CLI needs its own TFE token for the `cloud` block `init`; `TFE_TOKEN` working with `tfctl` does not prove the CLI honours it.
 
 **Intent.** Produce the read-only pre-migration assessment for the baseline.
 
