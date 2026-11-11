@@ -230,7 +230,9 @@
 
 ### Sub-task 6b (optional): Negative test, resource rename without a `moved` block
 
-**Status:** [ ] pending
+**Status:** [x] done (plan-only; branch kept unmerged for the write-up)
+
+**Result.** Branch `demo/negative-rename` (commit `f25cd76`, from tag `baseline-s3-aws4`) renames `aws_sns_topic.demo` to `aws_sns_topic.alerts` in `infra/main.tf` and `infra/outputs.tf`, with no `moved` block. `terraform plan -detailed-exitcode -no-color -lock=false` against the S3 backend exited **2**: `Plan: 1 to add, 0 to change, 1 to destroy.` Created: `aws_sns_topic.alerts`. Destroyed: `aws_sns_topic.demo` ("not in configuration"). The `demo_topic_arn` output changes to "known after apply". The plan log is `.state-backups/negative-rename-plan.log` (git-ignored). Afterwards the S3 state was re-pulled and its SHA-256 matched the baseline (`47dce3e5...79b18c`), serial 1, 5 resources, so nothing was written to state. Nothing was applied. The fix for the record is a `moved { from = aws_sns_topic.demo  to = aws_sns_topic.alerts }` block, not applied here. The branch is never merged; PR 1 is built from `main`.
 
 **Intent.** Show the zero-diff gate and rollback working on a deliberately bad change. Run it after the baseline is applied and before the good PR 1 cutover. It is plan-only: it changes no AWS resources, and the branch is never merged.
 
